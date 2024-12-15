@@ -17,7 +17,8 @@ class Game():
         self.score = 0
         self.current_time = 0
         self.end_time = 360
-        self.SourcePoints = [Entity.SourcePoint((240,112)),Entity.SourcePoint((272,112))]
+        self.pause = 0
+        self.SourcePoints = []
         pygame.display.set_caption("Nothing Frogger")
         self.static = []
         self.input = (0,0)
@@ -35,6 +36,7 @@ class Game():
             self.static.append(StaticObject.Grass(coordinates=(480-16*i,82)))
         for i in range(16):
             self.static.append(StaticObject.Grass(coordinates=(480-32*i,112)))
+            self.SourcePoints.append(Entity.SourcePoint(coordinates=(480-32*i-16,112)))
 
         self.line1 =Entity.Spawner(Entity.Car,(480,288),-1,0,180)
         self.line2 =Entity.Spawner(Entity.Car,(0,272),1,1,200)
@@ -109,6 +111,7 @@ class Game():
         pygame.mixer.music.play(-1)
         Label = Graphics.Button(coordinates=(110,10),content="Menu", fontsize=24)
         StartButton = Graphics.Button(content="1. Start",fontsize=14)
+        WarningMessage = Graphics.Button(coordinates=(240,200),is_active=1,content="",fontsize=16,panel=self.render_window)
         SettingsButton = Graphics.Button(content="2. Settings",fontsize=14)
         ExitButton =Graphics.Button(content="3. Exit",fontsize=14)
         MenuStack = Graphics.StackPanel(coordinates=(10,30),size=(250,200),padding=30 ,content=[StartButton,SettingsButton,ExitButton],is_active=1)
@@ -124,13 +127,15 @@ class Game():
                     case 0:
                         self.FixedUpdate()
                         pygame.mixer.music.stop()
-                    case 1:
-                        pass
+                    case 1:       
+                        WarningMessage.content="Denied!!!"
+                        WarningMessage.Render()
                         pygame.mixer.music.stop()
                     case 2:
                         pygame.quit()
                         sys.exit()    
             Panel.Render()
+            WarningMessage.Render()
             self.window.blit(pygame.transform.scale(self.render_window, self.resolution),(0,0))
             pygame.display.update()
     
@@ -141,6 +146,30 @@ class Game():
         stackpanel = Graphics.StackPanel(padding=200,orientation=0, content=[ScoreLabel,LivesLabel],size=(480,80),coordinates=(0,20))
         panel = Graphics.Panel(size=(480,85),content=[stackpanel,Endbar], panel=self.render_window)
         panel.Render()
+    def PauseMenu(self):
+        pygame.mixer.music.stop()
+        Label = Graphics.Button(coordinates=(110,10),content="Pause", fontsize=24)
+        StartButton = Graphics.Button(content="1. Start",fontsize=14)
+        ExitButton =Graphics.Button(content="3. Exit",fontsize=14)
+        MenuStack = Graphics.StackPanel(coordinates=(10,30),size=(250,200),padding=30 ,content=[StartButton,ExitButton],is_active=1)
+        Panel = Graphics.Panel(coordinates=(40,40),size=(300,250), content=[Label,MenuStack],panel=self.render_window)
+        while True:
+            input = self.User_Input()
+            if input ==(0,-1):
+                MenuStack.index-=1
+            if input==(0,1):
+                MenuStack.index+=1
+            if input ==(-1,-1):
+                match MenuStack.index:
+                    case 0:
+                        self.pause = 0
+                        self.FixedUpdate()
+                    case 1:
+                        pygame.quit()
+                        sys.exit()    
+            Panel.Render()
+            self.window.blit(pygame.transform.scale(self.render_window, self.resolution),(0,0))
+            pygame.display.update()
 
     def FindDeath(self):
         if self.player.is_alive == 0:
@@ -159,14 +188,39 @@ class Game():
                 self.turtles.clear()
                 self.player_lives = 3
                 self.current_time = 0
+                self.score = 0
+                for i in self.SourcePoints:
+                    i.is_full = 0
                 if self.User_Input() == (-1,-1):
                     self.MainMenu()
-
+    def WinMessage(self):
+        count = 0
+        for i in self.SourcePoints:
+            count+=i.is_full
+        if len(self.SourcePoints)==count:
+            while True:
+                Label = Graphics.Button(coordinates=(10,60),fontsize=18,is_active=1,content=f"You win!!!")
+                Message = Graphics.Panel(size=(150,150),panel=self.render_window, coordinates=(180,100),content=[Label])
+                Message.Render()
+                self.window.blit(pygame.transform.scale(self.render_window, self.resolution),(0,0))
+                pygame.display.update()
+                self.cars.clear()
+                self.trees.clear()
+                self.turtles.clear()
+                self.player_lives = 3
+                self.current_time = 0
+                self.score = 0
+                for i in self.SourcePoints:
+                    i.is_full = 0
+                if self.User_Input() == (-1,-1):
+                    self.MainMenu()
+    
     def FixedUpdate(self):
         tick = 0
         pygame.mixer.music.load("Assets/Sounds/Jeromy Cotton - Things Gonna Be a Lot Different Around Here.mp3")
         pygame.mixer.music.play(-1)
         while True:
+
             tick+=1
             if ((tick/60)%1==0):
                 self.current_time += 1
@@ -195,8 +249,15 @@ class Game():
                 EntryPoint.Update(self.player,self.render_window)
             self.InfoBox()
             self.FindDeath()
-            self.player.Update(self.User_Input(),self.FixedDeltaTime,self.render_window,static_objects=self.static) 
+            self.input = self.User_Input()
+            if self.input == (1,1):
+                self.PauseMenu()
+            self.player.Update(self.input,self.FixedDeltaTime,self.render_window,static_objects=self.static) 
+            
+            if self.pause:
+                self.PauseMenu()
             self.window.blit(pygame.transform.scale(self.render_window, self.resolution),(0,0))
             pygame.display.update()
+            
 
 Game().MainMenu()                

@@ -30,6 +30,7 @@ class player(CommonEntity):
         self.on_boad = 1
         self.is_movement = 0
         self.area = area
+        self.objects_around = []
 
     def get_objects_around(self,static_objects):
         around_objects = []
@@ -47,31 +48,31 @@ class player(CommonEntity):
         return around_objects
 
     def Update(self,movement,delta,render_area, static_objects= []):
-        objects_around = []
-        
+
+        if self.on_boad == 0:
+            for i in self.objects_around:
+                if i.get_rect().colliderect(self.get_rect()) and i.tag=="Water":
+                    self.is_alive = 0 
+
         if movement !=((0,0) or (-1,-1) or (1,1) or self.not_move != [0,0]):
-            objects_around = self.get_objects_around(static_objects)
+            self.objects_around = self.get_objects_around(static_objects)
             self.is_movement = 1
             if 0<=self.coordinates[0]+movement[0]*self.speed<=self.area.get_size()[0] and 0<=self.coordinates[1]+movement[1]*self.speed<=self.area.get_size()[1]:
                 
-                for i in objects_around:
-                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0]+16,self.coordinates[1],16,16)) and i.tag=="Grass" and movement[0]==1:
+                for i in self.objects_around:
+                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0]+16,self.coordinates[1],8,8)) and i.tag=="Grass" and movement[0]==1:
                         self.is_movement =0
-                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0]-16,self.coordinates[1],16,16)) and i.tag=="Grass" and movement[0]==-1:
+                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0]-16,self.coordinates[1],8,8)) and i.tag=="Grass" and movement[0]==-1:
                         self.is_movement =0
-                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0],self.coordinates[1]+16,16,16)) and i.tag=="Grass" and movement[1]==1:
+                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0],self.coordinates[1]+16,8,8)) and i.tag=="Grass" and movement[1]==1:
                         self.is_movement =0
-                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0],self.coordinates[1]-16,16,16)) and i.tag=="Grass" and movement[1]==-1:
+                    if i.get_rect().colliderect(pygame.Rect(self.coordinates[0],self.coordinates[1]-16,8,8)) and i.tag=="Grass" and movement[1]==-1:
                         self.is_movement =0
             if self.is_movement:
                 self.coordinates[0] = self.coordinates[0]+self.speed*movement[0]
                 self.coordinates[1] = self.coordinates[1]+self.speed*movement[1]
 
         render_area.blit(self.image1,self.coordinates)
-        if self.on_boad == 0:
-            for i in self.get_objects_around(static_objects):
-                if i.get_rect().colliderect(self.get_rect()) and i.tag=="Water":
-                    self.is_alive = 0 
         self.on_boad = 0
     
     def move(self,x,y):
@@ -167,8 +168,11 @@ class Turtle(CommonEntity):
                 render.blit(self.image,self.coordinates)
             else:
                 render.blit(pygame.transform.rotate(self.image,180),self.coordinates)
-            if (self.timer>self.timing-60):
-                self.image = pygame.image.load("Assets\\Tectures\\Turtle\\Turtle2.png")
+        if (self.timer>self.timing-60):
+            self.image = pygame.image.load("Assets\\Tectures\\Turtle\\Turtle2.png")
+        if self.underwater == 1:
+            if self.get_rect().collidepoint(player.get_center()):
+                player.is_alive = 0
     
     def Update(self,player,delta,render):
         self.underwater = 0
@@ -181,7 +185,7 @@ class Turtle(CommonEntity):
         if(self.timer>self.timing):
             self.underwater = 1      
         self.on_turtle(player,delta,render)
-        if self.underwater==1:
+        if (self.timer>self.timing-20):
             self.image = pygame.image.load("Assets\\Tectures\\Turtle\\Turtle3.png")
         self.coordinates[0] += self.is_left*self.speed*delta
 
@@ -204,7 +208,7 @@ class Spawner():
         self.timer = (self.timer+1)%self.timing
         if(self.timer==0):
             rand1 = randint(80,100)
-            rand2 = randint(330,350)
+            rand2 = randint(200,350)
             end = randint(self.diap[0],self.diap[1])
             match self.is_multiple:
                     case 1:
@@ -227,8 +231,9 @@ class SourcePoint(CommonEntity):
     def Update(self, player,render):
         pygame.draw.rect(render,(140,140,140),self.get_rect())
         if self.is_full == 0:
-            if self.get_rect().collidepoint(player.get_center()):
+            if self.get_rect().colliderect(player.get_rect()):
                 self.is_full = 1
+                player.on_boat = 1
         else:
             pygame.draw.rect(render,(30,30,30),pygame.Rect(self.coordinates[0]+2,self.coordinates[1]+2,13,13))
         
